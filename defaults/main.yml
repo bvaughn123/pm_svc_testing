@@ -1,0 +1,32 @@
+
+podman_user: podman
+podman_group: podman
+
+services:
+ 
+  - name: "mattermost-pod"
+    description: "Initiate mattermost pod"
+    after: "network-online.target"
+    exec_start: "/usr/bin/podman pod create --name mattermost --publish 443:443 --publish 80:80"
+    requires: "podman-mattermost-postgres.service podman-mattermost.service podman-mattermost-nginx.service"
+  
+  - name: "mattermost"
+    description: "Podman running mattermost"
+    after: "podman-mattermost-postgres.service"
+    part_of: "podman-mattermost.service"
+    working_dir: "/opt/containers"
+    exec_start: "/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroups=no-conmon --log-driver=journald --name=mattermost --pod=mattermost --env-file /opt/containers/mattermost/mattermost.env --security-opt label=disable  --health-cmd=none --volume /opt/containers/mattermost/data:/mattermost/data --volume /opt/containers/mattermost/logs:/mattermost/logs --volume /opt/containers/mattermost/config:/mattermost/config  --volume /opt/containers/mattermost/plugins:/mattermost/client/plugins docker.io/mattermost/mattermost-team-edition:latest"
+ 
+  - name: "postgres"
+    description: "Postgres mattermost container"
+    after: "podman-mattermost-pod.service"
+    part_of: "podman-mattermost.service"
+    working_dir: "/opt/containers"
+    exec_start: "/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroups=no-conmon --log-driver=journald  --name=postgres  --pod=mattermost --env-file /opt/containers/mattermost/postgres.env   --net=container:mattermost  --volume /opt/containers/mattermost/postgres:/var/lib/postgresql/data:Z   docker.io/postgres:latest"
+ 
+  - name: "nginx"
+    description: "NGINX for Mattermost"
+    after: "network-online.target podman-mattermost-postgres.service"
+    part_of: "podman-mattermost.service"
+    working_dir: "/opt/containers"
+    exec_start: "/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroups=no-conmon --log-driver=journald  --name=nginx  --pod=mattermost  --volume /opt/containers/nginx/conf.d:/etc/nginx/conf.d  docker.io/nginx:latest"

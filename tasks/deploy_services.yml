@@ -1,0 +1,25 @@
+---
+
+- name: Create env files for each container
+  template:
+    src: env.j2
+    dest: "{{ item.dest }}"
+  with_items: "{{ container_settings }}"
+
+- name: Deploy container systemd service files
+  template:
+    src: "podman-service-template.j2"
+    dest: "/etc/systemd/system/podman-{{ item.name }}.service"
+    owner: "{{ podman_user }}"
+    group: "{{ podman_group }}"
+    mode: '0644'
+  loop: "{{ services }}"
+  notify: Reload systemd
+
+- name: Enable and start services
+  systemd:
+    name: "podman-{{ item.name }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop: "{{ services }}"
