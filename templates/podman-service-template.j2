@@ -1,0 +1,25 @@
+[Unit]
+Description={{ item.description }}
+Wants=network.target
+After={{ item.after }}
+{% if item.requires is defined %}
+Requires={{ item.requires }}
+{% endif %}
+PartOf={{ item.part_of | default('') }}
+
+[Service]
+WorkingDirectory={{ item.working_dir | default('/opt/containers') }}
+User={{ podman_user }}
+Group={{ podman_group }}
+Restart=no
+ExecStartPre=/usr/bin/rm -f %T/%N.pid %T/%N.cid
+ExecStartPre=/usr/bin/podman rm --ignore -f {{ item.name }}
+ExecStart={{ item.exec_start }}
+ExecStop=/usr/bin/podman stop --ignore {{ item.name }} -t 30
+ExecStopPost=/usr/bin/podman rm --ignore -f {{ item.name }}
+ExecStopPost=/usr/bin/rm -f %T/%N.pid %T/%N.cid
+KillMode=none
+Type=forking
+
+[Install]
+WantedBy=multi-user.target default.target
