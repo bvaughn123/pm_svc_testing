@@ -1,6 +1,30 @@
 
+MATTERMOST_DOMAIN: test.test
+
 podman_user: podman
+podman_user_uid: 500
 podman_group: podman
+podman_group_gid: 500
+
+
+container_settings:
+
+  - name: mattemost
+    dest: /opt/containers/mattermost/mattermost.env
+    settings:
+      TZ: UTC
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: "postgres://{{ POSTGRES_USER}}:{{ POSTGRES_PASSWORD }}@localhost:5432/mattermost?sslmode=disable&connect_timeout=10"
+      MM_BLEVESETTINGS_INDEXDIR: "/mattermost/bleve"
+      MM_SERVICESETTINGS_SITEURL: "https://{{ MATTERMOST_DOMAIN }}"
+      
+  - name: postgres
+    dest: /opt/containers/mattermost/postgres.env
+    settings:
+      TZ: UTC
+      POSTGRES_USER: "{{ POSTGRES_USER }}"
+      POSTGRES_PASSWORD: "{{ POSTGRES_PASSWORD }}"
+      POSTGRES_DB: "{{ POSTGRES_DB }}"
 
 services:
  

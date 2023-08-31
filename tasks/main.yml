@@ -1,0 +1,66 @@
+---
+- name: check if podman group exists
+  shell: getent group {{ podman_group }}
+  register: podman_group_exists
+  ignore_errors: yes
+  become: yes
+
+
+- name: Create podman group
+  group:
+    name: "{{ podman_group }}"
+    state: present
+  become: yes
+  when: podman_group_exists is not defined
+
+- name: check if podman_user exists
+  shell: id -u {{ podman_user }}
+  register: podman_user_exists
+  ignore_errors: yes
+  become: yes
+
+# create podman user if it does not exist
+- name: Create podman user
+  user: 
+    name: "{{ podman_user }}"
+    group: "{{ podman_group }}"
+    shell: /bin/bash
+    home: /home/{{ podman_user }}
+    createhome: yes
+  become: yes
+  when: podman_user_exists is not defined
+  
+
+- name: Create env files for each container
+  template:
+    src: env.j2
+    dest: "{{ item.dest }}"
+    owner: "{{ podman_user }}"
+    group: "{{ podman_group }}"
+    mode: '0660'
+  with_items: "{{ container_settings }}"
+  become: yes
+
+
+- name: Deploy container systemd service files
+  template:
+    src: "podman-service-template.j2"
+    dest: "/etc/systemd/system/podman-{{ item.name }}.service"
+    owner: "{{ podman_user }}"
+    group: "{{ podman_group }}"
+    mode: '0660'
+  loop: "{{ services }}"
+  become: yes
+
+- name: Enable and start services
+  systemd:
+    name: "podman-{{ item.name }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop: "{{ services }}"
+  become: yes
+  notify: 
+    - Enable service
+    - Restart service
+    - Reload systemd

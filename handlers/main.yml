@@ -1,0 +1,14 @@
+- name: Enable service
+  shell: |
+    "sudo -u podman env XDG_RUNTIME_DIR=/run/user/{{ podman_user_uid }} systemctl --user enable podman-{{ item.name }}"
+  become: yes
+
+- name: Reload systemd
+  shell: |
+    "sudo -u podman env XDG_RUNTIME_DIR=/run/user/{{ podman_user_uid }} systemctl --user daemon-reload"
+  become: yes
+
+- name: Restart service
+  shell: |
+    "sudo -u podman env XDG_RUNTIME_DIR=/run/user/{{ podman_user_uid }} systemctl --user start podman-{{ item.name }}"
+  become: yes
